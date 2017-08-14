@@ -40,18 +40,21 @@ def custom_score(game, player):
     
     if game.is_winner(player):
         return float('inf')
-
+    
+    # Grab the number of moves available for player and the opponent
     my_moves = len(game.get_legal_moves(player))
     opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
 
-    if my_moves != opponent_moves:
-        return float(my_moves - opponent_moves)
-    else:
-        x1 ,y1 = game.get_player_location(player)
-        x2, y2 = game.get_player_location(game.get_opponent(player))
-        my_distance_from_center = math.sqrt(math.pow((x1 - game.width / 2), 2) + math.pow((y1 - game.height / 2), 2))
-        opponent_distance_from_center = math.sqrt(math.pow((x2 - game.width / 2), 2) + math.pow((y2 - game.height / 2), 2))
-        return float(my_distance_from_center - opponent_distance_from_center)
+    # Use the distant formulat to calculate the distance of the current location from the center
+    # of both the player and opponent
+    x1 ,y1 = game.get_player_location(player)
+    x2, y2 = game.get_player_location(game.get_opponent(player))
+    my_distance_from_center = math.sqrt(math.pow((x1 - game.width / 2), 2) + math.pow((y1 - game.height / 2), 2))
+    opponent_distance_from_center = math.sqrt(math.pow((x2 - game.width / 2), 2) + math.pow((y2 - game.height / 2), 2))
+    
+    # return the difference in distance from the center plus the difference of number of moves
+    # available for each player
+    return float(my_distance_from_center - opponent_distance_from_center + (my_moves - opponent_moves))
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -78,15 +81,20 @@ def custom_score_2(game, player):
         return float('-inf')
     if game.is_winner(player):
         return float('inf')
-
+    
+    # Grab list of moves available for player and opponent
     my_moves = game.get_legal_moves(player)
     opponent_moves = game.get_legal_moves(game.get_opponent(player))
 
+    # check how many moves they currently share in common as possible moves
+    # iterate through opponents moves and check if they are in player's moves
+    # if it is then increment counter by 1
     similar_moves = 0
     for move in opponent_moves:
         if move in my_moves:
             similar_moves += 1
     
+    # return difference of moves available plus the number of moves they share as possible moves
     return float(len(my_moves) - len(opponent_moves) + similar_moves)
 
 
@@ -117,10 +125,15 @@ def custom_score_3(game, player):
     if game.is_winner(player):
         return float('inf')
     
+    # grab number of moves for each player and number of spaces left
     number_of_my_moves = len(game.get_legal_moves(player))
     number_of_opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
     number_of_spaces = len(game.get_blank_spaces())
 
+    # I used this heuristic as a random playing around heuristic. After randomly playing around with
+    # all different types of values I settled on this one which performed OK. 
+    # Basically just subtracting the number of empty spaces from the current moves that have been played
+    # and the subtracting that number from the sum of number of moves available for both player and opponent
     return float(number_of_spaces - game.move_count - (number_of_my_moves + number_of_opponent_moves))
 
 
@@ -406,13 +419,17 @@ class AlphaBetaPlayer(IsolationPlayer):
                     return min_value
                 beta = min(beta, min_value)
             return min_value
-
+        
         best_move = (-1, -1)
         best_score = float('-inf')
 
+        # assign value to first available move to avoid forfeit
+        if game.get_legal_moves():
+            best_move = game.get_legal_moves()[0]
+
         for move in game.get_legal_moves():
             current_score = min_value(game.forecast_move(move), depth - 1, alpha, beta)
-            if current_score >= best_score:
+            if current_score > best_score:
                 best_score, best_move = current_score, move
             alpha = max(alpha, best_score)
         return best_move
