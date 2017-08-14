@@ -3,6 +3,7 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
+import math
 
 
 class SearchTimeout(Exception):
@@ -42,8 +43,15 @@ def custom_score(game, player):
 
     my_moves = len(game.get_legal_moves(player))
     opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(my_moves - opponent_moves)
 
+    if my_moves != opponent_moves:
+        return float(my_moves - opponent_moves)
+    else:
+        x1 ,y1 = game.get_player_location(player)
+        x2, y2 = game.get_player_location(game.get_opponent(player))
+        my_distance_from_center = math.sqrt(math.pow((x1 - game.width / 2), 2) + math.pow((y1 - game.height / 2), 2))
+        opponent_distance_from_center = math.sqrt(math.pow((x2 - game.width / 2), 2) + math.pow((y2 - game.height / 2), 2))
+        return float(my_distance_from_center - opponent_distance_from_center)
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -51,7 +59,6 @@ def custom_score_2(game, player):
 
     Note: this function should be called from within a Player instance as
     `self.score()` -- you should not need to call this function directly.
-
     Parameters
     ----------
     game : `isolation.Board`
@@ -67,8 +74,20 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float('-inf')
+    if game.is_winner(player):
+        return float('inf')
+
+    my_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
+
+    similar_moves = 0
+    for move in opponent_moves:
+        if move in my_moves:
+            similar_moves += 1
+    
+    return float(len(my_moves) - len(opponent_moves) + similar_moves)
 
 
 def custom_score_3(game, player):
@@ -93,8 +112,16 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float('-inf')
+    if game.is_winner(player):
+        return float('inf')
+    
+    number_of_my_moves = len(game.get_legal_moves(player))
+    number_of_opponent_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    number_of_spaces = len(game.get_blank_spaces())
+
+    return float(number_of_spaces - game.move_count - (number_of_my_moves + number_of_opponent_moves))
 
 
 class IsolationPlayer:
@@ -251,7 +278,7 @@ class MinimaxPlayer(IsolationPlayer):
 
         for move in game.get_legal_moves():
             current_score = min_value(game.forecast_move(move), depth - 1)
-            if current_score > best_score:
+            if current_score >= best_score:
                 best_score, best_move = current_score, move
         return best_move
 
@@ -294,10 +321,13 @@ class AlphaBetaPlayer(IsolationPlayer):
         self.time_left = time_left
         best_move = (-1, -1)
         try:
-            for i in range(5000):
-                best_move = self.alphabeta(game, i)
+            d = 0
+            while True:
+                d += 1
+                best_move = self.alphabeta(game, d)
         except SearchTimeout:
-            return best_move
+            pass
+        return best_move
 
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
@@ -382,7 +412,7 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         for move in game.get_legal_moves():
             current_score = min_value(game.forecast_move(move), depth - 1, alpha, beta)
-            if current_score > best_score:
+            if current_score >= best_score:
                 best_score, best_move = current_score, move
             alpha = max(alpha, best_score)
         return best_move
